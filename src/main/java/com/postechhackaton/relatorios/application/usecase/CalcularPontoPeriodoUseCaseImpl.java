@@ -2,16 +2,14 @@ package com.postechhackaton.relatorios.application.usecase;
 
 import com.postechhackaton.relatorios.application.dto.PontoCalculadoDto;
 import com.postechhackaton.relatorios.application.dto.RelatorioPeriodoPontoDto;
-import com.postechhackaton.relatorios.business.exceptions.NotFoundException;
-import com.postechhackaton.relatorios.domain.gateways.PontoEletronicoDatabaseGateway;
+import com.postechhackaton.relatorios.business.entities.PontoEletronicoEntity;
 import com.postechhackaton.relatorios.domain.usecase.CalcularPontoDiarioUseCase;
 import com.postechhackaton.relatorios.domain.usecase.CalcularPontoPeriodoUseCase;
-import com.postechhackaton.relatorios.infra.database.entities.PontoEletronico;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -19,40 +17,45 @@ import java.util.stream.Collectors;
 
 @Component
 public class CalcularPontoPeriodoUseCaseImpl implements CalcularPontoPeriodoUseCase {
-    private final PontoEletronicoDatabaseGateway pontoEletronicoDatabaseGateway;
+
     private final CalcularPontoDiarioUseCase calcularPontoDiarioUseCase;
 
-    public CalcularPontoPeriodoUseCaseImpl(PontoEletronicoDatabaseGateway pontoEletronicoDatabaseGateway, CalcularPontoDiarioUseCase calcularPontoDiarioUseCase) {
-        this.pontoEletronicoDatabaseGateway = pontoEletronicoDatabaseGateway;
+    public CalcularPontoPeriodoUseCaseImpl(CalcularPontoDiarioUseCase calcularPontoDiarioUseCase) {
         this.calcularPontoDiarioUseCase = calcularPontoDiarioUseCase;
     }
 
-    public RelatorioPeriodoPontoDto execute(String usuario, LocalDate dataInicio, LocalDate dataFim) {
-        LocalDateTime dataInicioRegistro = dataInicio.atStartOfDay();
-        LocalDateTime dataFimRegistro = dataFim.plusDays(1).atStartOfDay();
-        List<PontoEletronico> registros = pontoEletronicoDatabaseGateway.findByUsuarioAndDataBetween(usuario, dataInicioRegistro, dataFimRegistro);
+    public RelatorioPeriodoPontoDto execute(List<PontoEletronicoEntity> registros) {
+        assert registros != null;
+        assert !registros.isEmpty();
 
-        if (registros == null || registros.isEmpty()) {
-            throw new NotFoundException("Nenhum registro encontrado");
-        }
-
-        Map<LocalDate, List<PontoEletronico>> registrosPorDia = registros.stream()
+        Map<LocalDate, List<PontoEletronicoEntity>> registrosPorDia = registros.stream()
+                .sorted(Comparator.comparing(registro -> registro.getData().toLocalDate()))
                 .collect(Collectors.groupingBy(registro -> registro.getData().toLocalDate()));
 
         AtomicLong horasTrabalhadas = new AtomicLong();
         List<PontoCalculadoDto> pontos = new ArrayList<>();
         registrosPorDia.forEach((data, registrosDoDia) -> {
-            PontoCalculadoDto pontoCalculadoDto = calcularPontoDiarioUseCase.execute(usuario, registrosDoDia);
+            PontoCalculadoDto pontoCalculadoDto = calcularPontoDiarioUseCase.execute(registrosDoDia);
             horasTrabalhadas.addAndGet(pontoCalculadoDto.getTotalHorasTrabalhadas());
             pontos.add(pontoCalculadoDto);
         });
 
+        String usuario = registros.get(0).getUsuario();
+        LocalDate dataInicio = registrosPorDia.keySet().stream()
+                .findFirst()
+                .orElse(null);
+
+        LocalDate dataFim = registrosPorDia.keySet().stream()
+                .reduce((first, second) -> second)
+                .orElse(null);
+
         return RelatorioPeriodoPontoDto.builder()
                 .dataInicio(dataInicio)
                 .usuario(usuario)
-                .totalHorasTrabalhadas(horasTrabalhadas.get())
                 .dataFim(dataFim)
+                .totalHorasTrabalhadas(horasTrabalhadas.get())
                 .registros(pontos)
                 .build();
     }
+
 }

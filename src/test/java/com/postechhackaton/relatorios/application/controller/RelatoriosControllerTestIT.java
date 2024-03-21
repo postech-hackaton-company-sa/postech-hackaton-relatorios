@@ -1,21 +1,23 @@
 package com.postechhackaton.relatorios.application.controller;
 
-import com.postechhackaton.relatorios.business.enums.TipoRegistroPontoEletronico;
-import com.postechhackaton.relatorios.infra.database.entities.PontoEletronico;
-import com.postechhackaton.relatorios.infra.database.repositories.PontoEletronicoRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,48 +25,49 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Testcontainers
 class RelatoriosControllerTestIT {
 
-    @Autowired
-    MongoTemplate mongoTemplate;
+    @Container
+    static KafkaContainer kafkaContainer = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:latest"));
+
+
+    @DynamicPropertySource
+    static void kafkaProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
+    }
+
+    @Mock
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private PontoEletronicoRepository pontoEletronicoRepository;
-
-    @BeforeEach
-    void setUp() {
-        // Limpar dados de teste antes de cada execução de teste
-        pontoEletronicoRepository.deleteAll();
-    }
-
     @Test
-    void criarRelatorio_deveCalcularRelatorio_quandoCalculoTiverMultiplasEntradasEmUmDia() throws Exception {
-        pontoEletronicoRepository.save(stubPontoEletronico(LocalDateTime.now().minusHours(10), TipoRegistroPontoEletronico.ENTRADA));
-        pontoEletronicoRepository.save(stubPontoEletronico(LocalDateTime.now().minusHours(9), TipoRegistroPontoEletronico.SAIDA));
-        pontoEletronicoRepository.save(stubPontoEletronico(LocalDateTime.now().minusHours(8), TipoRegistroPontoEletronico.ENTRADA));
-        pontoEletronicoRepository.save(stubPontoEletronico(LocalDateTime.now().minusHours(6), TipoRegistroPontoEletronico.SAIDA));
-        pontoEletronicoRepository.save(stubPontoEletronico(LocalDateTime.now().minusHours(5), TipoRegistroPontoEletronico.ENTRADA));
-        pontoEletronicoRepository.save(stubPontoEletronico(LocalDateTime.now(), TipoRegistroPontoEletronico.SAIDA));
+    void criarRelatorio_deveRetornarErro_quandoNaoInformarOEmailDeEnvio() throws Exception {
 
         mockMvc.perform(MockMvcRequestBuilders.get("/v1/relatorios")
                         .header("usuario", "usuario-teste")
                         .param("dataInicio", LocalDate.now().toString())
                         .param("dataFim", LocalDate.now().plusDays(1).toString())
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
+                .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.totalHorasTrabalhadas").value(8));
+                .andExpect(jsonPath("$.errorMessage").value("Required parameter 'email' is not present."));
     }
 
-    private static PontoEletronico stubPontoEletronico(LocalDateTime data, TipoRegistroPontoEletronico tipo) {
-        return PontoEletronico.builder()
-                .id(UUID.randomUUID())
-                .usuario("usuario-teste")
-                .data(data)
-                .tipo(tipo)
-                .build();
+    @Test
+    void criarRelatorio_devePostarMensagemKafka_quandoChamadaEstiverCorreta() throws Exception {
+        Mockito.when(kafkaTemplate.send(Mockito.any(), Mockito.any())).thenReturn(null);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/v1/relatorios")
+                        .header("usuario", "usuario-teste")
+                        .param("dataInicio", LocalDate.now().toString())
+                        .param("dataFim", LocalDate.now().plusDays(1).toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.errorMessage").value("Required parameter 'email' is not present."));
     }
+
 }

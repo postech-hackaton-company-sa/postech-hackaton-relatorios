@@ -1,5 +1,7 @@
 package com.postechhackaton.relatorios.application.dto;
 
+import com.postechhackaton.relatorios.business.entities.PontoEletronicoEntity;
+import com.postechhackaton.relatorios.business.enums.StatusPonto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,11 +15,11 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PontoCalculadoDto {
-    private String status;
+    private StatusPonto status;
 
     private LocalDate data;
 
-    private List<PontoEletronicoDto> registros;
+    private List<PontoEletronicoEntity> registros;
 
     private long totalHorasTrabalhadas;
 }

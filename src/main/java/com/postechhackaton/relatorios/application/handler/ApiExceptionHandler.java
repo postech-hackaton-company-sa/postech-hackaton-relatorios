@@ -8,6 +8,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -27,10 +28,16 @@ public class ApiExceptionHandler {
                 e.getMessage()), HttpStatus.NOT_FOUND);
     }
 
+    //org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'email' for method parameter type String is not present
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public final ResponseEntity<ExceptionResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         return new ResponseEntity<>(new ExceptionResponse(ExceptionResponse.ErrorType.VALIDATION_FAILURE,
                 e.getMessage()), HttpStatus.BAD_REQUEST);
+    }
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public final ResponseEntity<ExceptionResponse> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
+        return new ResponseEntity<>(new ExceptionResponse(ExceptionResponse.ErrorType.VALIDATION_FAILURE,
+                e.getBody().getDetail()), HttpStatus.BAD_REQUEST);
     }
     @ExceptionHandler(Exception.class)
     public final ResponseEntity<ExceptionResponse> handleGenericException(Exception e) {
