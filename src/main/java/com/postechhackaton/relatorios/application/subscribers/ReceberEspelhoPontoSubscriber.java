@@ -3,8 +3,10 @@ package com.postechhackaton.relatorios.application.subscribers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.postechhackaton.relatorios.application.dto.QueryEspelhoPontoDto;
 import com.postechhackaton.relatorios.application.dto.RelatorioPeriodoPontoDto;
+import com.postechhackaton.relatorios.business.entities.FuncionarioEntity;
 import com.postechhackaton.relatorios.domain.gateways.EmailGateway;
 import com.postechhackaton.relatorios.domain.gateways.KafkaSenderGateway;
+import com.postechhackaton.relatorios.domain.usecase.BuscarDadosFuncionarioUseCase;
 import com.postechhackaton.relatorios.domain.usecase.CalcularPontoPeriodoUseCase;
 import com.postechhackaton.relatorios.domain.usecase.FormataRelatorioPeriodoUseCase;
 import lombok.extern.slf4j.Slf4j;
@@ -25,17 +27,21 @@ public class ReceberEspelhoPontoSubscriber {
 
     private final FormataRelatorioPeriodoUseCase formataRelatorioPeriodoUseCase;
 
+    private final BuscarDadosFuncionarioUseCase buscarDadosFuncionarioUseCase;
+
     private final EmailGateway emailGateway;
 
     public ReceberEspelhoPontoSubscriber(ObjectMapper objectMapper,
                                          KafkaSenderGateway kafkaSenderGateway,
                                          CalcularPontoPeriodoUseCase calcularPontoPeriodoUseCase,
                                          FormataRelatorioPeriodoUseCase formataRelatorioPeriodoUseCase,
+                                         BuscarDadosFuncionarioUseCase buscarDadosFuncionarioUseCase,
                                          EmailGateway emailGateway) {
         this.objectMapper = objectMapper;
         this.kafkaSenderGateway = kafkaSenderGateway;
         this.calcularPontoPeriodoUseCase = calcularPontoPeriodoUseCase;
         this.formataRelatorioPeriodoUseCase = formataRelatorioPeriodoUseCase;
+        this.buscarDadosFuncionarioUseCase = buscarDadosFuncionarioUseCase;
         this.emailGateway = emailGateway;
     }
 
@@ -45,8 +51,9 @@ public class ReceberEspelhoPontoSubscriber {
          try {
              log.debug("Received Message: " + json);
              QueryEspelhoPontoDto resposta = objectMapper.readValue(json, QueryEspelhoPontoDto.class);
+             FuncionarioEntity funcionario = buscarDadosFuncionarioUseCase.buscar(resposta.getUsuarioRequerinte(), resposta.getUsuario());
              RelatorioPeriodoPontoDto relatorio = calcularPontoPeriodoUseCase.execute(resposta.getResposta());
-             String emailFormatado = formataRelatorioPeriodoUseCase.formatar(relatorio);
+             String emailFormatado = formataRelatorioPeriodoUseCase.formatar(relatorio, funcionario);
              emailGateway.enviar(resposta.getEmail(), emailFormatado);
              return relatorio;
          } catch (Exception e) {

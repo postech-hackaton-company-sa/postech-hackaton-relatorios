@@ -2,6 +2,7 @@ package com.postechhackaton.relatorios.application.subscribers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.postechhackaton.relatorios.application.dto.RelatorioPeriodoPontoDto;
+import com.postechhackaton.relatorios.application.usecase.BuscarDadosFuncionarioUseCaseImpl;
 import com.postechhackaton.relatorios.application.usecase.CalcularPontoDiarioUseCaseImpl;
 import com.postechhackaton.relatorios.application.usecase.CalcularPontoPeriodoUseCaseImpl;
 import com.postechhackaton.relatorios.application.usecase.FormataRelatorioPeriodoUseCaseImpl;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ClassPathResource;
@@ -44,12 +46,16 @@ class ReceberEspelhoPontoSubscriberTest {
     @Mock
     private KafkaSenderGateway kafkaSenderGateway;
 
+    @Mock
+    private BuscarDadosFuncionarioUseCaseImpl buscarDadosFuncionarioUseCase;
+
     @InjectMocks
     private ReceberEspelhoPontoSubscriber receberEspelhoPontoSubscriber;
 
     @BeforeEach
     void setUp() {
-        receberEspelhoPontoSubscriber = new ReceberEspelhoPontoSubscriber(objectMapper, kafkaSenderGateway, calcularPontoPeriodoUseCase, formataRelatorioPeriodoUseCase, emailGateway);
+        MockitoAnnotations.openMocks(this);
+        receberEspelhoPontoSubscriber = new ReceberEspelhoPontoSubscriber(objectMapper, kafkaSenderGateway, calcularPontoPeriodoUseCase, formataRelatorioPeriodoUseCase, buscarDadosFuncionarioUseCase, emailGateway);
     }
 
     @Test
@@ -66,7 +72,6 @@ class ReceberEspelhoPontoSubscriberTest {
     public void executar_deveGerarOsTresTiposDeStatus() throws IOException {
         String json = carregarJson("3_registros_tipos_diferentes.json");
         RelatorioPeriodoPontoDto relatorio = receberEspelhoPontoSubscriber.executar(json);
-
 
         assertEquals(3, relatorio.getRegistros().size());
         assertEquals(StatusPonto.INCONSISTENTE, relatorio.getRegistros().get(0).getStatus());

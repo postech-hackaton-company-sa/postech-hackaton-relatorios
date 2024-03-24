@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,11 +58,13 @@ public class RelatoriosController {
                     }),
     })
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void criarRelatorio(@NotBlank @RequestHeader("usuario") String usuario,
-                                                   @NotBlank(message = "E-mail deve ser informado") @RequestParam("email") String email,
-                                                   @NotNull(message = "Data inicial do relatorio precisa ser informada") @RequestParam("dataInicio") LocalDateTime dataInicio,
-                                                   @NotNull(message = "Data encerramento do relatorio precisa ser informada") @RequestParam("dataFim") LocalDateTime dataFim) throws Exception {
-        QueryEspelhoPontoDto query = QueryEspelhoPontoDto.builder().dataInicio(dataInicio).dataFim(dataFim).usuario(usuario).email(email).build();
+    public void criarRelatorio(@NotBlank @RequestHeader("username") String usuarioRequerinte,
+                                @RequestHeader("roles") @Pattern(regexp = ".*admin.*", message = "Apenas administradores podem requisitar relatorio de funcionarios") String roles,
+                                @NotBlank(message = "E-mail deve ser informado") @RequestParam("email") String email,
+                                @NotBlank(message = "Usuario do relatorio") @RequestParam("usuario") String usuario,
+                                @NotNull(message = "Data inicial do relatorio precisa ser informada") @RequestParam("dataInicio") LocalDateTime dataInicio,
+                                @NotNull(message = "Data encerramento do relatorio precisa ser informada") @RequestParam("dataFim") LocalDateTime dataFim) throws Exception {
+        QueryEspelhoPontoDto query = QueryEspelhoPontoDto.builder().dataInicio(dataInicio).dataFim(dataFim).usuarioRequerinte(usuarioRequerinte).usuario(usuario).email(email).build();
         requisitarRegistrosEspelhoPontoUseCase.requisitar(query);
     }
 

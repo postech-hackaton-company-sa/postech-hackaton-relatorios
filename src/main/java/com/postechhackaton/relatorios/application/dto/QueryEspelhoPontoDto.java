@@ -20,6 +20,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QueryEspelhoPontoDto {
+    private String usuarioRequerinte;
+
     private String usuario;
 
     private String email;

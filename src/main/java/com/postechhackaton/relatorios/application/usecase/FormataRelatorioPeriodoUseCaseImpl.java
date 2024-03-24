@@ -1,9 +1,7 @@
 package com.postechhackaton.relatorios.application.usecase;
 
-import com.postechhackaton.relatorios.application.dto.PontoCalculadoDto;
-import com.postechhackaton.relatorios.application.dto.PontoEletronicoDto;
 import com.postechhackaton.relatorios.application.dto.RelatorioPeriodoPontoDto;
-import com.postechhackaton.relatorios.business.entities.PontoEletronicoEntity;
+import com.postechhackaton.relatorios.business.entities.FuncionarioEntity;
 import com.postechhackaton.relatorios.domain.usecase.FormataRelatorioPeriodoUseCase;
 import org.springframework.stereotype.Component;
 
@@ -15,12 +13,19 @@ public class FormataRelatorioPeriodoUseCaseImpl implements FormataRelatorioPerio
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     @Override
-    public String formatar(RelatorioPeriodoPontoDto relatorio) {
+    public String formatar(RelatorioPeriodoPontoDto relatorio, FuncionarioEntity funcionario) {
         StringBuilder content = new StringBuilder();
         content.append("<html><body>");
         content.append("<h2>Relatório de Ponto</h2>");
         content.append("<div>");
-        content.append("<b>Funcionário: </b>").append("<span>").append(relatorio.getUsuario()).append("</span>").append("<br/>");
+        content.append("<b>Funcionário: </b>").append("<br />");
+        if (funcionario != null) {
+            adicionaDadoCasoExista(funcionario.getUsername(), content);
+            adicionaDadoCasoExista(funcionario.getNome(), content);
+            adicionaDadoCasoExista(funcionario.getSobrenome(), content);
+            adicionaDadoCasoExista(funcionario.getCpf(), content);
+            adicionaDadoCasoExista(funcionario.getEmail(), content);
+        }
         content.append("<b>Total de horas trabalhadas: </b>").append("<span>").append(relatorio.getTotalHorasTrabalhadas()).append("</span>").append("<br/>");
         content.append("<b>Início: </b>").append("<span>").append(relatorio.getDataInicio().format(DATE_TIME_FORMATTER)).append("</span>").append("<br/>");
         content.append("<b>Fim: </b>").append("<span>").append(relatorio.getDataFim().format(DATE_TIME_FORMATTER)).append("</span>").append("<br/>");
@@ -39,5 +44,11 @@ public class FormataRelatorioPeriodoUseCaseImpl implements FormataRelatorioPerio
         }
         content.append("</body></html>");
         return content.toString();
+    }
+
+    private void adicionaDadoCasoExista(String dado, StringBuilder content) {
+        if (dado != null && !dado.isBlank()) {
+            content.append("<span>").append(dado).append("</span>").append("<br>");
+        }
     }
 }
