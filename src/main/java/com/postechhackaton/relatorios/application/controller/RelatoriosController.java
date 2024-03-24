@@ -58,12 +58,12 @@ public class RelatoriosController {
                     }),
     })
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void criarRelatorio(@NotBlank @RequestHeader("username") String usuarioRequerinte,
-                                @RequestHeader("roles") @Pattern(regexp = ".*admin.*", message = "Apenas administradores podem requisitar relatorio de funcionarios") String roles,
-                                @NotBlank(message = "E-mail deve ser informado") @RequestParam("email") String email,
-                                @NotBlank(message = "Usuario do relatorio") @RequestParam("usuario") String usuario,
-                                @NotNull(message = "Data inicial do relatorio precisa ser informada") @RequestParam("dataInicio") LocalDateTime dataInicio,
-                                @NotNull(message = "Data encerramento do relatorio precisa ser informada") @RequestParam("dataFim") LocalDateTime dataFim) throws Exception {
+    public void criarRelatorio(@NotBlank @RequestHeader("username") @Schema(description = "Usuario que esta fazendo a requisicao") String usuarioRequerinte,
+                                @RequestHeader("roles") @Pattern(regexp = ".*admin.*", message = "Apenas administradores podem requisitar relatorio de funcionarios") @Schema(description = "Roles do usuario que esta fazendo a requisicao") String roles,
+                                @NotBlank(message = "E-mail deve ser informado") @Schema(description = "Email que será enviado o relatório") @RequestParam("email") String email,
+                                @NotBlank(message = "Usuario do relatorio deve ser informado") @RequestParam("usuario") @Schema(description = "Usuário que será realizado o relatório") String usuario,
+                                @NotNull(message = "Data inicial do relatorio precisa ser informada") @RequestParam("dataInicio") @Schema(example = "2024-03-01T00:00:00") LocalDateTime dataInicio,
+                                @NotNull(message = "Data encerramento do relatorio precisa ser informada") @RequestParam("dataFim") @Schema(example = "2024-03-03T00:00:00") LocalDateTime dataFim) throws Exception {
         QueryEspelhoPontoDto query = QueryEspelhoPontoDto.builder().dataInicio(dataInicio).dataFim(dataFim).usuarioRequerinte(usuarioRequerinte).usuario(usuario).email(email).build();
         requisitarRegistrosEspelhoPontoUseCase.requisitar(query);
     }
